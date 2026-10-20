@@ -1,0 +1,853 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Meme Harvester! - Year 2 English Rearrange the Words</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- FontAwesome CDN -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <!-- Canvas Confetti CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+  
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Outfit:wght@400;600;800&display=swap');
+    
+    * {
+      font-family: 'Fredoka', cursive, sans-serif;
+      user-select: none;
+      -webkit-user-select: none;
+      touch-action: manipulation;
+    }
+
+    body {
+      background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
+      color: #f8fafc;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* Screen mode containers */
+    .view-container {
+      transition: all 0.3s ease;
+      margin: 0 auto;
+    }
+
+    .mode-phone {
+      max-width: 420px;
+      min-height: 780px;
+      border: 12px solid #334155;
+      border-radius: 40px;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
+      margin-top: 10px;
+      margin-bottom: 20px;
+      overflow: hidden;
+      background: #0f172a;
+    }
+
+    .mode-desktop {
+      max-width: 1200px;
+      width: 95%;
+      border-radius: 24px;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+    }
+
+    /* Floating & Wiggling Memes */
+    .meme-card {
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .meme-card:hover {
+      transform: scale(1.08) rotate(2deg);
+      z-index: 10;
+    }
+    .meme-card:active {
+      transform: scale(0.95);
+    }
+
+    @keyframes floatWiggle {
+      0%, 100% { transform: translateY(0px) rotate(0deg); }
+      25% { transform: translateY(-4px) rotate(-3deg); }
+      75% { transform: translateY(4px) rotate(3deg); }
+    }
+    
+    .wiggle-anim {
+      animation: floatWiggle 3s infinite ease-in-out;
+    }
+
+    /* Word Tiles Styling */
+    .word-tile {
+      background: linear-gradient(180deg, #38bdf8 0%, #0284c7 100%);
+      color: white;
+      font-weight: 700;
+      border-bottom: 4px solid #0369a1;
+      border-radius: 14px;
+      padding: 10px 16px;
+      font-size: 1.1rem;
+      cursor: pointer;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+      transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .word-tile:hover {
+      transform: translateY(-2px);
+      filter: brightness(1.1);
+    }
+    .word-tile:active {
+      transform: translateY(2px);
+      border-bottom-width: 1px;
+    }
+
+    .answer-tile {
+      background: linear-gradient(180deg, #f59e0b 0%, #d97706 100%);
+      border-bottom: 4px solid #b45309;
+    }
+
+    /* Modal Glassmorphism */
+    .glass-modal {
+      background: rgba(15, 23, 42, 0.92);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+    }
+
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar {
+      width: 8px;
+    }
+    ::-webkit-scrollbar-track {
+      background: rgba(15, 23, 42, 0.6);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #38bdf8;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body class="flex flex-col items-center justify-start min-h-screen p-2 sm:p-4">
+
+  <!-- TOP APP BAR / MODE SELECTOR -->
+  <header class="w-full max-w-5xl flex flex-wrap items-center justify-between gap-3 p-3 mb-2 bg-slate-800/80 rounded-2xl border border-slate-700/60 shadow-lg backdrop-blur">
+    <div class="flex items-center gap-3">
+      <div class="text-3xl sm:text-4xl">🐶🔥</div>
+      <div>
+        <h1 class="font-extrabold text-xl sm:text-2xl text-amber-400 tracking-wide flex items-center gap-2">
+          Meme Harvester! <span class="text-xs bg-sky-500/20 text-sky-300 border border-sky-500/40 px-2 py-0.5 rounded-full font-semibold">Year 2 Super Minds</span>
+        </h1>
+        <p class="text-xs text-slate-400">Rearrange the Words into Correct Sentences</p>
+      </div>
+    </div>
+
+    <div class="flex items-center gap-2">
+      <!-- Screen View Switcher -->
+      <button id="btnPhoneMode" onclick="setScreenMode('phone')" class="px-3 py-1.5 rounded-xl bg-slate-700 text-slate-200 text-xs font-bold hover:bg-slate-600 transition flex items-center gap-1.5 border border-slate-600">
+        <i class="fa-solid fa-mobile-screen-button text-amber-400"></i> 📱 Phone
+      </button>
+      <button id="btnDesktopMode" onclick="setScreenMode('desktop')" class="px-3 py-1.5 rounded-xl bg-sky-600 text-white text-xs font-bold transition flex items-center gap-1.5 shadow-md">
+        <i class="fa-solid fa-desktop text-amber-300"></i> 💻 Desktop
+      </button>
+      <!-- Teacher Shortcut -->
+      <button onclick="toggleTeacherPanel()" class="px-3 py-1.5 rounded-xl bg-purple-600/80 hover:bg-purple-600 text-white text-xs font-bold transition border border-purple-400/40">
+        <i class="fa-solid fa-chalkboard-user"></i> Teacher Tools
+      </button>
+      <!-- Mute Toggle -->
+      <button id="btnMute" onclick="toggleMute()" class="w-9 h-9 rounded-xl bg-slate-700 hover:bg-slate-600 text-amber-400 flex items-center justify-center transition border border-slate-600">
+        <i class="fa-solid fa-volume-high text-base"></i>
+      </button>
+    </div>
+  </header>
+
+  <!-- TEACHER PANEL (HIDDEN BY DEFAULT) -->
+  <div id="teacherPanel" class="hidden w-full max-w-5xl bg-purple-900/90 border-2 border-purple-400/50 rounded-2xl p-4 mb-3 text-sm text-purple-100 flex flex-wrap items-center justify-between gap-3 shadow-xl">
+    <div class="flex items-center gap-2">
+      <i class="fa-solid fa-graduation-cap text-xl text-yellow-300"></i>
+      <div>
+        <span class="font-bold text-yellow-300">Teacher Classroom Tools:</span> Quick Jump to any Level or Auto-Complete current stage.
+      </div>
+    </div>
+    <div class="flex flex-wrap items-center gap-2">
+      <button onclick="loadLevel(1)" class="px-3 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs">Jump to Lvl 1 (Easy)</button>
+      <button onclick="loadLevel(2)" class="px-3 py-1 rounded-lg bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs">Jump to Lvl 2 (Medium)</button>
+      <button onclick="loadLevel(3)" class="px-3 py-1 rounded-lg bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs">Jump to Lvl 3 (Hard)</button>
+      <button onclick="autoHarvestStage()" class="px-3 py-1 rounded-lg bg-purple-500 hover:bg-purple-400 text-white font-bold text-xs shadow">⚡ Auto-Clear 30 Memes</button>
+    </div>
+  </div>
+
+  <!-- MAIN VIEWPORT CONTAINER (Adapts for Phone / Desktop) -->
+  <main id="mainContainer" class="view-container mode-desktop w-full flex flex-col flex-1 p-3 sm:p-5 relative bg-slate-900/90 border border-slate-800">
+    
+    <!-- GAME HEADER STATS BAR -->
+    <div class="flex flex-wrap items-center justify-between gap-3 bg-slate-800/90 p-3 sm:p-4 rounded-2xl border border-slate-700/80 mb-4 shadow-md">
+      <!-- Level Indicator -->
+      <div class="flex items-center gap-3">
+        <div id="levelBadge" class="px-3 py-1.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 font-extrabold text-sm sm:text-base text-white shadow-md flex items-center gap-2">
+          <i class="fa-solid fa-layer-group"></i> LEVEL 1: EASY
+        </div>
+        <div class="text-xs text-slate-300 font-medium hidden sm:block">
+          <i class="fa-solid fa-bullseye text-amber-400"></i> Target: Harvest 30 Memes!
+        </div>
+      </div>
+
+      <!-- Meme Counter & Progress -->
+      <div class="flex-1 max-w-xs mx-2">
+        <div class="flex justify-between text-xs font-bold mb-1">
+          <span class="text-sky-300"><i class="fa-solid fa-basket-shopping"></i> Harvest Progress</span>
+          <span id="harvestCountText" class="text-amber-400">0 / 30</span>
+        </div>
+        <div class="w-full h-3 bg-slate-700 rounded-full overflow-hidden p-0.5 border border-slate-600">
+          <div id="harvestProgressBar" class="h-full bg-gradient-to-r from-amber-400 to-emerald-400 rounded-full transition-all duration-300" style="width: 0%"></div>
+        </div>
+      </div>
+
+      <!-- Score & Streak -->
+      <div class="flex items-center gap-3">
+        <div class="bg-slate-900/80 px-3 py-1.5 rounded-xl border border-slate-700 text-center">
+          <div class="text-[10px] text-slate-400 uppercase font-bold">Total Score</div>
+          <div id="scoreText" class="text-lg font-black text-amber-400">0</div>
+        </div>
+        <div class="bg-slate-900/80 px-3 py-1.5 rounded-xl border border-slate-700 text-center">
+          <div class="text-[10px] text-slate-400 uppercase font-bold">Streak</div>
+          <div id="streakText" class="text-lg font-black text-rose-400">🔥 x0</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MEME GRID FIELD (THE HARVEST FIELD) -->
+    <div id="memeGridContainer" class="flex-1 overflow-y-auto pr-1">
+      <div class="text-center my-2">
+        <p class="text-sm sm:text-base font-bold text-sky-200">
+          <i class="fa-solid fa-hand-pointer text-amber-400 animate-bounce"></i> Click any floating meme to open its English question and harvest it!
+        </p>
+      </div>
+
+      <div id="memeGrid" class="grid grid-cols-3 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-6 gap-3 p-2">
+        <!-- 30 Memes will be populated here dynamically -->
+      </div>
+    </div>
+
+  </main>
+
+  <!-- QUESTION MODAL (REARRANGE SENTENCE POPUP) -->
+  <div id="questionModal" class="fixed inset-0 glass-modal hidden z-50 flex items-center justify-center p-3 sm:p-5">
+    <div class="bg-slate-800 border-2 border-sky-400/80 w-full max-w-2xl rounded-3xl p-4 sm:p-6 shadow-2xl relative flex flex-col gap-4 animate-scaleUp">
+      
+      <!-- Close Button -->
+      <button onclick="closeQuestionModal()" class="absolute top-4 right-4 w-9 h-9 rounded-full bg-slate-700 hover:bg-slate-600 text-slate-300 font-bold flex items-center justify-center transition">
+        ✕
+      </button>
+
+      <!-- Modal Header -->
+      <div class="flex items-center gap-3 border-b border-slate-700/80 pb-3">
+        <div id="modalMemeIcon" class="text-4xl sm:text-5xl animate-bounce">🐶</div>
+        <div>
+          <span id="modalMemeTitle" class="text-xs font-bold uppercase tracking-wider text-amber-400">Meme #1 Challenge</span>
+          <h2 class="text-lg sm:text-xl font-black text-white">Rearrange the Words into a Correct Sentence!</h2>
+        </div>
+      </div>
+
+      <!-- Teacher Tip Box -->
+      <div class="bg-sky-900/40 border border-sky-500/30 rounded-2xl p-3 flex items-start gap-2 text-xs sm:text-sm text-sky-200">
+        <i class="fa-solid fa-lightbulb text-amber-300 text-base mt-0.5"></i>
+        <div>
+          <span class="font-bold text-amber-300">Super Minds Rule Tip:</span> Look for the word with a <span class="underline font-bold text-white">Capital Letter</span> for the start, and the word with a <span class="underline font-bold text-white">Period '.'</span> or <span class="underline font-bold text-white">'?'</span> at the end!
+        </div>
+      </div>
+
+      <!-- Answer Box / Target Drop Line -->
+      <div class="bg-slate-900/90 border-2 border-dashed border-amber-400/60 rounded-2xl p-4 min-h-[90px] flex flex-wrap items-center gap-2 justify-center transition-all shadow-inner relative" id="answerArea">
+        <div id="answerPlaceholder" class="text-slate-500 text-xs sm:text-sm italic font-medium">
+          👇 Tap word tiles below to build your sentence here...
+        </div>
+      </div>
+
+      <!-- Available Scrambled Words Pool -->
+      <div class="flex flex-col gap-2">
+        <div class="text-xs font-bold text-slate-400 uppercase tracking-wider">Word Bank:</div>
+        <div id="wordBank" class="flex flex-wrap items-center justify-center gap-2.5 p-3 bg-slate-900/50 rounded-2xl border border-slate-700/60 min-h-[80px]">
+          <!-- Scrambled Word Tiles go here -->
+        </div>
+      </div>
+
+      <!-- Modal Action Buttons -->
+      <div class="flex items-center justify-between gap-3 pt-2">
+        <button onclick="resetCurrentQuestion()" class="px-4 py-2.5 rounded-xl bg-slate-700 hover:bg-slate-600 text-slate-200 font-bold text-xs sm:text-sm transition flex items-center gap-2 border border-slate-600">
+          <i class="fa-solid fa-rotate-left text-amber-400"></i> Reset
+        </button>
+
+        <button onclick="checkAnswer()" class="flex-1 py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-white font-black text-sm sm:text-base tracking-wide shadow-lg shadow-emerald-900/40 transition transform active:scale-95 flex items-center justify-center gap-2">
+          <i class="fa-solid fa-circle-check text-xl"></i> CHECK ANSWER
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- STAGE / GAME VICTORY OVERLAY -->
+  <div id="victoryOverlay" class="fixed inset-0 glass-modal hidden z-50 flex items-center justify-center p-4">
+    <div class="bg-slate-800 border-4 border-amber-400 w-full max-w-xl rounded-3xl p-6 sm:p-8 shadow-2xl text-center flex flex-col items-center gap-4 relative animate-scaleUp">
+      
+      <div id="victoryMemeAvatar" class="text-7xl sm:text-8xl animate-bounce my-2">👑🐕</div>
+      
+      <span id="victorySubTitle" class="px-4 py-1 rounded-full bg-amber-400/20 text-amber-300 text-xs font-black tracking-widest uppercase border border-amber-400/40">
+        STAGE COMPLETED!
+      </span>
+
+      <h1 id="victoryTitle" class="text-2xl sm:text-3xl font-black text-white leading-tight">
+        SUPER BRAIN DOGE CONGRATULATES YOU! 🎉
+      </h1>
+
+      <p id="victoryMessage" class="text-sm sm:text-base text-slate-300 max-w-md">
+        You successfully harvested all 30 Memes for this level! Your English grammar skills are out of this world!
+      </p>
+
+      <div class="bg-slate-900/80 rounded-2xl p-4 w-full border border-slate-700 flex justify-around my-2">
+        <div>
+          <div class="text-xs text-slate-400 font-bold">Memes Harvested</div>
+          <div id="vicHarvestCount" class="text-xl font-black text-emerald-400">30 / 30</div>
+        </div>
+        <div class="border-r border-slate-700"></div>
+        <div>
+          <div class="text-xs text-slate-400 font-bold">Total Score</div>
+          <div id="vicScore" class="text-xl font-black text-amber-400">0</div>
+        </div>
+      </div>
+
+      <button id="btnNextLevel" onclick="proceedToNextLevel()" class="w-full py-3.5 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-black text-base sm:text-lg shadow-xl shadow-amber-900/40 transition transform active:scale-95 flex items-center justify-center gap-2">
+        NEXT LEVEL <i class="fa-solid fa-arrow-right"></i>
+      </button>
+    </div>
+  </div>
+
+
+  <!-- JAVASCRIPT GAME LOGIC -->
+  <script>
+    /* ==========================================================================
+       1. DATA & CURRICULUM QUESTIONS (YEAR 2 SUPER MINDS ALIGNED - 90 TOTAL)
+       ========================================================================== */
+    const MEME_AVATARS = [
+      { emoji: "🐶", name: "Doge", title: "Much Brain Doge" },
+      { emoji: "😿", name: "Crying Cat", title: "Crying Cat Meme" },
+      { emoji: "🐸", name: "Cheerful Frog", title: "Pepe Froggy" },
+      { emoji: "🦆", name: "Derpy Duck", title: "Quackers" },
+      { emoji: "🫠", name: "Blob", title: "Laughing Blob" },
+      { emoji: "🌶️", name: "Spicy Pepper", title: "Spicy Boy" },
+      { emoji: "🐼", name: "Surprised Panda", title: "Panda Pop" },
+      { emoji: "👓", name: "Glasses Cat", title: "Smarty Cat" },
+      { emoji: "😎", name: "Cool Cat", title: "Chill Cat" },
+      { emoji: "🥑", name: "Avocado", title: "Happy Avo" },
+      { emoji: "🐵", name: "Cheeky Monkey", title: "Monke" },
+      { emoji: "🦖", name: "Derp Dino", title: "Rexy" },
+      { emoji: "🦄", name: "Sparkle Unicorn", title: "Unicorn Star" },
+      { emoji: "🐱", name: "Nyan Cat", title: "Rainbow Kitty" },
+      { emoji: "🦊", name: "Clever Fox", title: "Foxy" }
+    ];
+
+    // CONGRATULATORY END-OF-LEVEL SPECIAL MEMES
+    const LEVEL_VICTORY_MEMES = [
+      { emoji: "👑🐕", title: "SUPER BRAIN DOGE CONGRATULATES YOU! 🎉", msg: "Wow! Such grammar! Very correct! You are a Year 2 English Master!" },
+      { emoji: "🚀🐸", title: "CHAD FROG IS PROUD OF YOU! 🔥", msg: "Level complete! You rearranged every sentence without dropping a single word!" },
+      { emoji: "🏆😼", title: "COOL CAT IS INSANELY IMPRESSED! 😎", msg: "Outstanding work! You solved all 30 questions like a true champion!" }
+    ];
+
+    // 90 QUESTIONS PRE-PROGRAMMED (Level 1: 30, Level 2: 30, Level 3: 30)
+    const QUESTIONS_DATABASE = {
+      // LEVEL 1: EASY (4-5 words, Basic Animals, Toys, Food, Present Continuous)
+      1: [
+        { original: "The dog is running.", words: ["The", "dog", "is", "running."] },
+        { original: "She likes red apples.", words: ["She", "likes", "red", "apples."] },
+        { original: "I have a ball.", words: ["I", "have", "a", "ball."] },
+        { original: "The cat is cute.", words: ["The", "cat", "is", "cute."] },
+        { original: "He is eating pizza.", words: ["He", "is", "eating", "pizza."] },
+        { original: "This is my toy.", words: ["This", "is", "my", "toy."] },
+        { original: "It is a frog.", words: ["It", "is", "a", "frog."] },
+        { original: "The bird can fly.", words: ["The", "bird", "can", "fly."] },
+        { original: "We like sweet ice cream.", words: ["We", "like", "sweet", "ice", "cream."] },
+        { original: "A duck can swim.", words: ["A", "duck", "can", "swim."] },
+        { original: "I love my school.", words: ["I", "love", "my", "school."] },
+        { original: "She has a pencil.", words: ["She", "has", "a", "pencil."] },
+        { original: "The sun is hot.", words: ["The", "sun", "is", "hot."] },
+        { original: "My bag is big.", words: ["My", "bag", "is", "big."] },
+        { original: "Look at the monkey.", words: ["Look", "at", "the", "monkey."] },
+        { original: "They play with blocks.", words: ["They", "play", "with", "blocks."] },
+        { original: "He wears a hat.", words: ["He", "wears", "a", "hat."] },
+        { original: "The fish is blue.", words: ["The", "fish", "is", "blue."] },
+        { original: "I ride a bike.", words: ["I", "ride", "a", "bike."] },
+        { original: "She is my friend.", words: ["She", "is", "my", "friend."] },
+        { original: "The lizard is green.", words: ["The", "lizard", "is", "green."] },
+        { original: "Do you like milk?", words: ["Do", "you", "like", "milk?"] },
+        { original: "He can jump high.", words: ["He", "can", "jump", "high."] },
+        { original: "The elephant is big.", words: ["The", "elephant", "is", "big."] },
+        { original: "I eat fresh carrots.", words: ["I", "eat", "fresh", "carrots."] },
+        { original: "Where is my book?", words: ["Where", "is", "my", "book?"] },
+        { original: "She is sleeping now.", words: ["She", "is", "sleeping", "now."] },
+        { original: "The spider is small.", words: ["The", "spider", "is", "small."] },
+        { original: "We play football together.", words: ["We", "play", "football", "together."] },
+        { original: "He has green eyes.", words: ["He", "has", "green", "eyes."] }
+      ],
+
+      // LEVEL 2: MEDIUM (5-7 words, Prepositions in/on/under, Questions, Adjectives)
+      2: [
+        { original: "A monkey is eating a banana.", words: ["A", "monkey", "is", "eating", "a", "banana."] },
+        { original: "John is wearing a yellow shirt.", words: ["John", "is", "wearing", "a", "yellow", "shirt."] },
+        { original: "The ruler is on the desk.", words: ["The", "ruler", "is", "on", "the", "desk."] },
+        { original: "Is your brother playing with blocks?", words: ["Is", "your", "brother", "playing", "with", "blocks?"] },
+        { original: "The cat is under the table.", words: ["The", "cat", "is", "under", "the", "table."] },
+        { original: "Why is the baby crying now?", words: ["Why", "is", "the", "baby", "crying", "now?"] },
+        { original: "She has a beautiful pink doll.", words: ["She", "has", "a", "beautiful", "pink", "doll."] },
+        { original: "Do you eat cereal for breakfast?", words: ["Do", "you", "eat", "cereal", "for", "breakfast?"] },
+        { original: "Mei Mei walks to school daily.", words: ["Mei", "Mei", "walks", "to", "school", "daily."] },
+        { original: "The frog jumps into the water.", words: ["The", "frog", "jumps", "into", "the", "water."] },
+        { original: "There is a spider in my shoe.", words: ["There", "is", "a", "spider", "in", "my", "shoe."] },
+        { original: "We can ride a big bicycle.", words: ["We", "can", "ride", "a", "big", "bicycle."] },
+        { original: "Where did you put my bag?", words: ["Where", "did", "you", "put", "my", "bag?"] },
+        { original: "My sister likes to eat cheese.", words: ["My", "sister", "likes", "to", "eat", "cheese."] },
+        { original: "The yellow duckling is swimming fast.", words: ["The", "yellow", "duckling", "is", "swimming", "fast."] },
+        { original: "Can you cross the street safely?", words: ["Can", "you", "cross", "the", "street", "safely?"] },
+        { original: "The red pencil is in the box.", words: ["The", "red", "pencil", "is", "in", "the", "box."] },
+        { original: "He is drawing a green monster.", words: ["He", "is", "drawing", "a", "green", "monster."] },
+        { original: "Are you sitting on the chair?", words: ["Are", "you", "sitting", "on", "the", "chair?"] },
+        { original: "The rat is under the chair.", words: ["The", "rat", "is", "under", "the", "chair."] },
+        { original: "My mother makes a yummy cake.", words: ["My", "mother", "makes", "a", "yummy", "cake."] },
+        { original: "What is she doing right now?", words: ["What", "is", "she", "doing", "right", "now?"] },
+        { original: "Two birds are singing in trees.", words: ["Two", "birds", "are", "singing", "in", "trees."] },
+        { original: "He does not like sour lemons.", words: ["He", "does", "not", "like", "sour", "lemons."] },
+        { original: "Do you have any blue pens?", words: ["Do", "you", "have", "any", "blue", "pens?"] },
+        { original: "The train is moving very fast.", words: ["The", "train", "is", "moving", "very", "fast."] },
+        { original: "She put her notebook on top.", words: ["She", "put", "her", "notebook", "on", "top."] },
+        { original: "We love eating sweet juicy peaches.", words: ["We", "love", "eating", "sweet", "juicy", "peaches."] },
+        { original: "Is the dog hiding under bed?", words: ["Is", "the", "dog", "hiding", "under", "bed?"] },
+        { original: "They are reading books together inside.", words: ["They", "are", "reading", "books", "together", "inside."] }
+      ],
+
+      // LEVEL 3: HARD / CHALLENGING (7-9 words, multiple adjectives, because/and/but, time/place)
+      3: [
+        { original: "Two fluffy cats are sleeping under the big tree.", words: ["Two", "fluffy", "cats", "are", "sleeping", "under", "the", "big", "tree."] },
+        { original: "Ben always finishes his homework before having dinner.", words: ["Ben", "always", "finishes", "his", "homework", "before", "having", "dinner."] },
+        { original: "The cute black cat has a long fluffy tail.", words: ["The", "cute", "black", "cat", "has", "a", "long", "fluffy", "tail."] },
+        { original: "We found a shiny old coin in the garden.", words: ["We", "found", "a", "shiny", "old", "coin", "in", "the", "garden."] },
+        { original: "What kind of delicious food does he like best?", words: ["What", "kind", "of", "delicious", "food", "does", "he", "like", "best?"] },
+        { original: "Did you clean your messy bedroom before going out?", words: ["Did", "you", "clean", "your", "messy", "bedroom", "before", "going", "out?"] },
+        { original: "Tim likes football but he cannot run very fast.", words: ["Tim", "likes", "football", "but", "he", "cannot", "run", "very", "fast."] },
+        { original: "Tom went to the doctor because he was sick.", words: ["Tom", "went", "to", "the", "doctor", "because", "he", "was", "sick."] },
+        { original: "Lily missed her bus so she ran to school.", words: ["Lily", "missed", "her", "bus", "so", "she", "ran", "to", "school."] },
+        { original: "Sarah washed her hands and ate the fresh fruit.", words: ["Sarah", "washed", "her", "hands", "and", "ate", "the", "fresh", "fruit."] },
+        { original: "How much does this fast toy train cost here?", words: ["How", "much", "does", "this", "fast", "toy", "train", "cost", "here?"] },
+        { original: "The big brown bear lives in a quiet forest.", words: ["The", "big", "brown", "bear", "lives", "in", "a", "quiet", "forest."] },
+        { original: "My smart sister can speak English and Bahasa Melayu.", words: ["My", "smart", "sister", "can", "speak", "English", "and", "Bahasa", "Melayu."] },
+        { original: "They stayed inside the house because it was raining.", words: ["They", "stayed", "inside", "the", "house", "because", "it", "was", "raining."] },
+        { original: "Do you have any cold orange juice in fridge?", words: ["Do", "you", "have", "any", "cold", "orange", "juice", "in", "fridge?"] },
+        { original: "My grandmother always bakes tasty cookies on Sunday morning.", words: ["My", "grandmother", "always", "bakes", "tasty", "cookies", "on", "Sunday", "morning."] },
+        { original: "Where did you put my heavy blue school bag?", words: ["Where", "did", "you", "put", "my", "heavy", "blue", "school", "bag?"] },
+        { original: "The hungry little mouse took a small piece cheese.", words: ["The", "hungry", "little", "mouse", "took", "a", "small", "piece", "cheese."] },
+        { original: "She wears a lovely red dress to the party.", words: ["She", "wears", "a", "lovely", "red", "dress", "to", "the", "party."] },
+        { original: "Can we visit the crowded zoo on Saturday afternoon?", words: ["Can", "we", "visit", "the", "crowded", "zoo", "on", "Saturday", "afternoon?"] },
+        { original: "The scary green lizard crawled under the big rock.", words: ["The", "scary", "green", "lizard", "crawled", "under", "the", "big", "rock."] },
+        { original: "I like to eat noodles but my brother likes rice.", words: ["I", "like", "to", "eat", "noodles", "but", "my", "brother", "likes", "rice."] },
+        { original: "Why did you leave your yellow umbrella at school?", words: ["Why", "did", "you", "leave", "your", "yellow", "umbrella", "at", "school?"] },
+        { original: "There are seven colorful parrots sitting on the branch.", words: ["There", "are", "seven", "colorful", "parrots", "sitting", "on", "the", "branch."] },
+        { original: "He opened his pencil case and took out rubber.", words: ["He", "opened", "his", "pencil", "case", "and", "took", "out", "rubber."] },
+        { original: "My best friend usually walks to the library together.", words: ["My", "best", "friend", "usually", "walks", "to", "the", "library", "together."] },
+        { original: "Is that playful puppy drinking milk from the bowl?", words: ["Is", "that", "playful", "puppy", "drinking", "milk", "from", "the", "bowl?"] },
+        { original: "We put our dirty shoes outside near the door.", words: ["We", "put", "our", "dirty", "shoes", "outside", "near", "the", "door."] },
+        { original: "She sang a sweet song for her little brother.", words: ["She", "sang", "a", "sweet", "song", "for", "her", "little", "brother."] },
+        { original: "The brave police officer stopped the fast moving car.", words: ["The", "brave", "police", "officer", "stopped", "the", "fast", "moving", "car."] }
+      ]
+    };
+
+    /* ==========================================================================
+       2. GAME STATE MANAGEMENT
+       ========================================================================== */
+    let currentLevel = 1;
+    let score = 0;
+    let streak = 0;
+    let isMuted = false;
+    let activeMemeIndex = null;
+    let harvestedMemes = {}; // Tracks harvested status per level e.g. {1: [0, 1, 3...]}
+    let userSelectedWords = [];
+    let currentQuestionObj = null;
+
+    /* ==========================================================================
+       3. WEB AUDIO API SYNTHESIZER SOUND SYSTEM
+       ========================================================================== */
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    let audioCtx = null;
+
+    function initAudio() {
+      if (!audioCtx) {
+        audioCtx = new AudioContext();
+      }
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+    }
+
+    function playSound(type) {
+      if (isMuted) return;
+      initAudio();
+      if (!audioCtx) return;
+
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+
+      const now = audioCtx.currentTime;
+
+      if (type === 'pop') {
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(400, now);
+        osc.frequency.exponentialRampToValueAtTime(800, now + 0.08);
+        gain.gain.setValueAtTime(0.3, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.08);
+        osc.start(now);
+        osc.stop(now + 0.08);
+      } else if (type === 'correct') {
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(523.25, now); // C5
+        osc.frequency.setValueAtTime(659.25, now + 0.1); // E5
+        osc.frequency.setValueAtTime(783.99, now + 0.2); // G5
+        gain.gain.setValueAtTime(0.3, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.35);
+        osc.start(now);
+        osc.stop(now + 0.35);
+      } else if (type === 'wrong') {
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(200, now);
+        osc.frequency.linearRampToValueAtTime(100, now + 0.25);
+        gain.gain.setValueAtTime(0.3, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.25);
+        osc.start(now);
+        osc.stop(now + 0.25);
+      } else if (type === 'win') {
+        // Fanfare
+        [523.25, 659.25, 783.99, 1046.50].forEach((freq, idx) => {
+          const o = audioCtx.createOscillator();
+          const g = audioCtx.createGain();
+          o.connect(g);
+          g.connect(audioCtx.destination);
+          o.type = 'triangle';
+          o.frequency.setValueAtTime(freq, now + idx * 0.12);
+          g.gain.setValueAtTime(0.3, now + idx * 0.12);
+          g.gain.exponentialRampToValueAtTime(0.01, now + idx * 0.12 + 0.3);
+          o.start(now + idx * 0.12);
+          o.stop(now + idx * 0.12 + 0.3);
+        });
+      }
+    }
+
+    function toggleMute() {
+      isMuted = !isMuted;
+      const btn = document.getElementById('btnMute');
+      btn.innerHTML = isMuted 
+        ? '<i class="fa-solid fa-volume-xmark text-slate-400"></i>' 
+        : '<i class="fa-solid fa-volume-high text-amber-400"></i>';
+    }
+
+    /* ==========================================================================
+       4. SCREEN MODE & TEACHER CONTROLS
+       ========================================================================== */
+    function setScreenMode(mode) {
+      playSound('pop');
+      const container = document.getElementById('mainContainer');
+      const btnPhone = document.getElementById('btnPhoneMode');
+      const btnDesktop = document.getElementById('btnDesktopMode');
+
+      if (mode === 'phone') {
+        container.className = "view-container mode-phone w-full flex flex-col flex-1 p-3 relative bg-slate-900/90 border border-slate-800";
+        btnPhone.className = "px-3 py-1.5 rounded-xl bg-sky-600 text-white text-xs font-bold shadow-md transition flex items-center gap-1.5";
+        btnDesktop.className = "px-3 py-1.5 rounded-xl bg-slate-700 text-slate-200 text-xs font-bold hover:bg-slate-600 transition flex items-center gap-1.5 border border-slate-600";
+      } else {
+        container.className = "view-container mode-desktop w-full flex flex-col flex-1 p-3 sm:p-5 relative bg-slate-900/90 border border-slate-800";
+        btnDesktop.className = "px-3 py-1.5 rounded-xl bg-sky-600 text-white text-xs font-bold shadow-md transition flex items-center gap-1.5";
+        btnPhone.className = "px-3 py-1.5 rounded-xl bg-slate-700 text-slate-200 text-xs font-bold hover:bg-slate-600 transition flex items-center gap-1.5 border border-slate-600";
+      }
+    }
+
+    function toggleTeacherPanel() {
+      playSound('pop');
+      const panel = document.getElementById('teacherPanel');
+      panel.classList.toggle('hidden');
+    }
+
+    /* ==========================================================================
+       5. CORE GAMEPLAY FUNCTIONS
+       ========================================================================== */
+    function initGame() {
+      harvestedMemes = { 1: [], 2: [], 3: [] };
+      loadLevel(1);
+    }
+
+    function loadLevel(lvl) {
+      currentLevel = lvl;
+      if (!harvestedMemes[lvl]) harvestedMemes[lvl] = [];
+      updateLevelUI();
+      renderMemeGrid();
+      updateProgress();
+    }
+
+    function updateLevelUI() {
+      const badge = document.getElementById('levelBadge');
+      if (currentLevel === 1) {
+        badge.className = "px-3 py-1.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 font-extrabold text-xs sm:text-sm text-white shadow-md flex items-center gap-2";
+        badge.innerHTML = '<i class="fa-solid fa-seedling"></i> LEVEL 1: EASY';
+      } else if (currentLevel === 2) {
+        badge.className = "px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 font-extrabold text-xs sm:text-sm text-white shadow-md flex items-center gap-2";
+        badge.innerHTML = '<i class="fa-solid fa-fire"></i> LEVEL 2: MEDIUM';
+      } else {
+        badge.className = "px-3 py-1.5 rounded-xl bg-gradient-to-r from-rose-600 to-purple-600 font-extrabold text-xs sm:text-sm text-white shadow-md flex items-center gap-2";
+        badge.innerHTML = '<i class="fa-solid fa-crown"></i> LEVEL 3: HARD';
+      }
+    }
+
+    function renderMemeGrid() {
+      const grid = document.getElementById('memeGrid');
+      grid.innerHTML = '';
+
+      const harvestedList = harvestedMemes[currentLevel] || [];
+
+      for (let i = 0; i < 30; i++) {
+        const isHarvested = harvestedList.includes(i);
+        const avatar = MEME_AVATARS[i % MEME_AVATARS.length];
+
+        const card = document.createElement('div');
+        
+        if (isHarvested) {
+          card.className = "bg-slate-800/40 border border-slate-700/50 rounded-2xl p-2.5 flex flex-col items-center justify-center opacity-40 grayscale cursor-not-allowed relative";
+          card.innerHTML = `
+            <div class="text-3xl sm:text-4xl mb-1">${avatar.emoji}</div>
+            <div class="text-[10px] font-bold text-slate-400">#${i+1} HARVESTED</div>
+            <div class="absolute top-1 right-1 text-emerald-400 text-xs font-black"><i class="fa-solid fa-circle-check"></i></div>
+          `;
+        } else {
+          card.className = "meme-card wiggle-anim bg-slate-800 border-2 border-slate-700 hover:border-amber-400 rounded-2xl p-2.5 flex flex-col items-center justify-center cursor-pointer shadow-md transition group relative";
+          card.setAttribute('onclick', `openQuestionModal(${i})`);
+          card.innerHTML = `
+            <div class="text-3xl sm:text-4xl mb-1 transform group-hover:scale-125 transition duration-200">${avatar.emoji}</div>
+            <div class="text-[10px] font-extrabold text-amber-300 tracking-wide">MEME #${i+1}</div>
+            <div class="text-[9px] text-slate-400 group-hover:text-sky-300 font-semibold truncate max-w-full">${avatar.name}</div>
+          `;
+        }
+
+        grid.appendChild(card);
+      }
+    }
+
+    function updateProgress() {
+      const count = (harvestedMemes[currentLevel] || []).length;
+      document.getElementById('harvestCountText').innerText = `${count} / 30`;
+      const pct = (count / 30) * 100;
+      document.getElementById('harvestProgressBar').style.width = `${pct}%`;
+      document.getElementById('scoreText').innerText = score;
+      document.getElementById('streakText').innerText = `🔥 x${streak}`;
+    }
+
+    /* ==========================================================================
+       6. QUESTION MODAL & WORD TILE INTERACTION
+       ========================================================================== */
+    function openQuestionModal(index) {
+      playSound('pop');
+      activeMemeIndex = index;
+      const qList = QUESTIONS_DATABASE[currentLevel];
+      currentQuestionObj = qList[index];
+
+      const avatar = MEME_AVATARS[index % MEME_AVATARS.length];
+      document.getElementById('modalMemeIcon').innerText = avatar.emoji;
+      document.getElementById('modalMemeTitle').innerText = `${avatar.title} - Question #${index + 1}`;
+
+      // Reset user selections
+      userSelectedWords = [];
+
+      // Scramble words
+      const scrambled = [...currentQuestionObj.words].sort(() => Math.random() - 0.5);
+
+      renderWordBank(scrambled);
+      renderAnswerArea();
+
+      document.getElementById('questionModal').classList.remove('hidden');
+    }
+
+    function closeQuestionModal() {
+      playSound('pop');
+      document.getElementById('questionModal').classList.add('hidden');
+    }
+
+    function renderWordBank(wordList) {
+      const bank = document.getElementById('wordBank');
+      bank.innerHTML = '';
+
+      wordList.forEach((word, idx) => {
+        const tile = document.createElement('div');
+        tile.className = "word-tile";
+        tile.innerText = word;
+        tile.onclick = () => selectWord(word, tile);
+        bank.appendChild(tile);
+      });
+    }
+
+    function selectWord(word, tileElem) {
+      playSound('pop');
+      userSelectedWords.push(word);
+      tileElem.remove(); // Move out of bank
+      renderAnswerArea();
+    }
+
+    function deselectWord(word, index) {
+      playSound('pop');
+      userSelectedWords.splice(index, 1);
+      
+      // Re-add to bank
+      const bank = document.getElementById('wordBank');
+      const tile = document.createElement('div');
+      tile.className = "word-tile";
+      tile.innerText = word;
+      tile.onclick = () => selectWord(word, tile);
+      bank.appendChild(tile);
+
+      renderAnswerArea();
+    }
+
+    function renderAnswerArea() {
+      const area = document.getElementById('answerArea');
+      area.innerHTML = '';
+
+      if (userSelectedWords.length === 0) {
+        area.innerHTML = `
+          <div id="answerPlaceholder" class="text-slate-500 text-xs sm:text-sm italic font-medium">
+            👇 Tap word tiles below to build your sentence here...
+          </div>`;
+        return;
+      }
+
+      userSelectedWords.forEach((word, idx) => {
+        const tile = document.createElement('div');
+        tile.className = "word-tile answer-tile animate-scaleUp";
+        tile.innerText = word;
+        tile.onclick = () => deselectWord(word, idx);
+        area.appendChild(tile);
+      });
+    }
+
+    function resetCurrentQuestion() {
+      if (!currentQuestionObj) return;
+      playSound('pop');
+      userSelectedWords = [];
+      const scrambled = [...currentQuestionObj.words].sort(() => Math.random() - 0.5);
+      renderWordBank(scrambled);
+      renderAnswerArea();
+    }
+
+    /* ==========================================================================
+       7. ANSWER CHECKING & VICTORY
+       ========================================================================== */
+    function checkAnswer() {
+      if (!currentQuestionObj) return;
+
+      const userSentence = userSelectedWords.join(' ');
+      const correctSentence = currentQuestionObj.original;
+
+      if (userSentence === correctSentence) {
+        // Correct Answer!
+        playSound('correct');
+        streak++;
+        const points = 100 + (streak * 10);
+        score += points;
+
+        // Mark harvested
+        if (!harvestedMemes[currentLevel]) harvestedMemes[currentLevel] = [];
+        if (!harvestedMemes[currentLevel].includes(activeMemeIndex)) {
+          harvestedMemes[currentLevel].push(activeMemeIndex);
+        }
+
+        // Small Confetti Burst
+        confetti({
+          particleCount: 50,
+          spread: 60,
+          origin: { y: 0.7 }
+        });
+
+        closeQuestionModal();
+        renderMemeGrid();
+        updateProgress();
+
+        // Check Stage Clear
+        if (harvestedMemes[currentLevel].length >= 30) {
+          triggerStageVictory();
+        }
+
+      } else {
+        // Wrong Answer!
+        playSound('wrong');
+        streak = 0;
+        updateProgress();
+
+        // Shake Answer Box
+        const area = document.getElementById('answerArea');
+        area.classList.add('border-rose-500', 'bg-rose-950/30');
+        setTimeout(() => {
+          area.classList.remove('border-rose-500', 'bg-rose-950/30');
+        }, 500);
+      }
+    }
+
+    function triggerStageVictory() {
+      playSound('win');
+
+      // Big Confetti explosion
+      confetti({
+        particleCount: 150,
+        spread: 100,
+        origin: { y: 0.5 }
+      });
+
+      const vicMeme = LEVEL_VICTORY_MEMES[(currentLevel - 1) % LEVEL_VICTORY_MEMES.length];
+
+      document.getElementById('victoryMemeAvatar').innerText = vicMeme.emoji;
+      document.getElementById('victoryTitle').innerText = vicMeme.title;
+      document.getElementById('victoryMessage').innerText = vicMeme.msg;
+      document.getElementById('vicHarvestCount').innerText = `${harvestedMemes[currentLevel].length} / 30`;
+      document.getElementById('vicScore').innerText = score;
+
+      const nextBtn = document.getElementById('btnNextLevel');
+      if (currentLevel < 3) {
+        nextBtn.innerHTML = `PROCEED TO LEVEL ${currentLevel + 1} <i class="fa-solid fa-arrow-right"></i>`;
+      } else {
+        nextBtn.innerHTML = `🏆 YOU COMPLETED ALL 3 LEVELS! PLAY AGAIN <i class="fa-solid fa-rotate-right"></i>`;
+      }
+
+      document.getElementById('victoryOverlay').classList.remove('hidden');
+    }
+
+    function proceedToNextLevel() {
+      playSound('pop');
+      document.getElementById('victoryOverlay').classList.add('hidden');
+
+      if (currentLevel < 3) {
+        loadLevel(currentLevel + 1);
+      } else {
+        // Restart entire game
+        score = 0;
+        streak = 0;
+        initGame();
+      }
+    }
+
+    /* Teacher shortcut: Auto-clear all 30 memes in current level */
+    function autoHarvestStage() {
+      playSound('win');
+      harvestedMemes[currentLevel] = Array.from({length: 30}, (_, i) => i);
+      score += 3000;
+      renderMemeGrid();
+      updateProgress();
+      triggerStageVictory();
+    }
+
+    /* ==========================================================================
+       8. INITIALIZE ON LOAD
+       ========================================================================== */
+    window.onload = () => {
+      initGame();
+    };
+  </script>
+</body>
+</html>
